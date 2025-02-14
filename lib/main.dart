@@ -3,19 +3,14 @@ import 'dart:async';
 import 'dart:math';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter/services.dart' show rootBundle;
-import 'package:csv/csv.dart';
-import 'dart:convert';
+import 'package:geolocator/geolocator.dart';
 
-void main() => runApp(MaterialApp(home: SpeedTracker()));
+main() => runApp(MaterialApp(home: SpeedTracker()));
 
 class SpeedTracker extends StatefulWidget {
   @override
   _SpeedTrackerState createState() => _SpeedTrackerState();
 }
-
-
-
 
 class _SpeedTrackerState extends State<SpeedTracker> {
   static const double earthRadiusMiles = 3958.8;
@@ -23,7 +18,6 @@ class _SpeedTrackerState extends State<SpeedTracker> {
   static const int speedMeasureRate = 500;
 
   double _lastMeasuredSpeed = 0.0;
-  List<List<double>> _gpsData = [];
   int _currentIndex = 0;
   double? _prevLat, _prevLon;
   final List<FlSpot> _speedData = [FlSpot(0, 0)];
@@ -35,86 +29,68 @@ class _SpeedTrackerState extends State<SpeedTracker> {
   @override
   void initState() {
     super.initState();
-    _loadCsvData();
+    _requestLocationPermission();
     _graphUpdateTimer = Timer.periodic(Duration(milliseconds: graphUpdateRate), _updateGraph);
   }
 
-  Map<String, dynamic> prepareTelemetry(double latitude, double longitude, double speed) {
-    return {
-      "timestamp": DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(DateTime.now().toUtc()),
-      "location": {
-        "latitude": latitude,
-        "longitude": longitude
-      },
-      "speed": speed
-    };
-  }
-
-  void sendTelemetry() {
-    if (_currentIndex == 0 || _currentIndex >= _gpsData.length) return;
-
-    double lat = _gpsData[_currentIndex][0];
-    double lon = _gpsData[_currentIndex][1];
-
-    Map<String, dynamic> telemetry = prepareTelemetry(lat, lon, _lastMeasuredSpeed);
-    String jsonPayload = jsonEncode(telemetry);
-
-    print(jsonPayload); // Replace with actual HTTP POST request
-  }
-
-  Future<void> _loadCsvData() async {
-    try {
-      final rawData = await rootBundle.loadString("assets/gps_data.csv");
-      List<List<dynamic>> csvTable = const CsvToListConverter(eol: "\n").convert(rawData);
-
-      if (csvTable.isEmpty) return;
-
-      if (csvTable[0][0] is String && csvTable[0][1] is String) {
-        csvTable.removeAt(0);
-      }
-
-      _gpsData = csvTable
-          .where((row) => row.length >= 2)
-          .map((row) {
-        double? lat = double.tryParse(row[0].toString());
-        double? lon = double.tryParse(row[1].toString());
-        return (lat != null && lon != null) ? [lat, lon] : null;
-      })
-          .whereType<List<double>>()
-          .toList();
-
-      if (_gpsData.isNotEmpty) {
-        _speedTimer = Timer.periodic(Duration(milliseconds: speedMeasureRate), _updateSpeed);
-      }
-    } catch (e) {
-      print("Error loading CSV: $e");
+  Future<void> _requestLocationPermission() async {
+    bool permissionGranted = await requestLocationPermission();
+    if (permissionGranted) {
+      _startLocationUpdates();
+    } else {
+      print("Location permissions are denied.");
     }
   }
 
-  void _updateSpeed(Timer timer) {
-    if (_currentIndex >= _gpsData.length) {
-      _speedTimer?.cancel();
-      return;
+  Future<bool> requestLocationPermission() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
     }
 
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return false;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return false;
+    }
+
+    return true;
+  }
+
+  void _startLocationUpdates() {
+    _speedTimer = Timer.periodic(Duration(milliseconds: speedMeasureRate), _updateSpeed);
+  }
+
+  void _updateSpeed(Timer timer) async {
     try {
-      double lat = _gpsData[_currentIndex][0];
-      double lon = _gpsData[_currentIndex][1];
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      double lat = position.latitude;
+      double lon = position.longitude;
       String timestamp = DateFormat('HH:mm:ss.SSS').format(DateTime.now());
 
       if (_prevLat != null && _prevLon != null) {
         double distance = _calculateDistance(_prevLat!, _prevLon!, lat, lon);
-        _lastMeasuredSpeed = distance * 3600;
+        _lastMeasuredSpeed = distance * 3600 / (speedMeasureRate / 1000);
       }
 
       _prevLat = lat;
       _prevLon = lon;
       _currentIndex++;
 
-      sendTelemetry();
-
       setState(() {
-        _locationLog.insert(0, {"latlon": "Lat: ${lat.toStringAsFixed(5)}, Lon: ${lon.toStringAsFixed(5)}", "timestamp": timestamp});
+        _locationLog.insert(0, {
+          "latlon": "Lat: ${lat.toStringAsFixed(5)}, Lon: ${lon.toStringAsFixed(5)}",
+          "timestamp": timestamp
+        });
         if (_locationLog.length > 20) _locationLog.removeLast();
       });
     } catch (e) {
@@ -127,9 +103,7 @@ class _SpeedTrackerState extends State<SpeedTracker> {
       for (int i = 0; i < _speedData.length; i++) {
         _speedData[i] = FlSpot(_speedData[i].x - 0.05, _speedData[i].y);
       }
-
-      _speedData.add(FlSpot(_speedData.last.x + 0.05, _lastMeasuredSpeed.toDouble()));
-
+      _speedData.add(FlSpot(_speedData.last.x + 0.05, _lastMeasuredSpeed));
       if (_speedData.length > 20) _speedData.removeAt(0);
     });
   }
@@ -256,3 +230,5 @@ class _SpeedTrackerState extends State<SpeedTracker> {
     );
   }
 }
+
+
