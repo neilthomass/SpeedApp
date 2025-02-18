@@ -21,53 +21,74 @@ A Flutter application that tracks and visualizes speed data in real-time with a 
 - Dart SDK
 - iOS/Android development environment
 - Required packages:
-  - fl_chart
-  - intl
-  - csv
-  - geolocator
+    - `fl_chart`
+    - `intl`
+    - `csv`
+    - `geolocator`
 
 ### Installation
 
-1. Clone the repository
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/speed-tracker.git
+   cd speed-tracker
+   ```
 2. Install dependencies:
-    [bash]
-    flutter pub get
+   ```bash
+   flutter pub get
+   ```
 3. Place your GPS data file in:
-    assets/gps_data.csv
+   ```
+   assets/gps_data.csv
+   ```
 4. Run the app:
-    [bash]
-    flutter run
+   ```bash
+   flutter run
+   ```
 
 ### CSV File Format
+
 The GPS data file should be in CSV format with the following structure:
-    latitude,longitude
-    XX.XXXXX,YY.YYYYY
+
+```
+latitude,longitude
+XX.XXXXX,YY.YYYYY
+```
 
 ## Features in Detail
+
 ### Speed Display
 - Large, easy-to-read speed indicator
 - Toggle between MPH and KPH
 - Smooth value transitions
+
 ### Speed Chart
 - Real-time updating graph
 - Smooth curve interpolation
 - Dynamic y-axis scaling
 - Transparent gradient fill
+
 ### Location Log
 - Real-time GPS coordinate tracking
 - Timestamp for each location update
 - Scrollable history view
+
 ### Settings
 - Theme toggle (Dark/Light mode)
 - Current location display
 - Persistent settings storage
+
 ## Technical Details
+
 - Built with Flutter
 - Uses custom interpolation for smooth animations
 - Implements GPS data parsing
 - Features real-time data processing
 - Responsive design for various screen sizes
+
 ## Dependencies
+
+```yaml
 dependencies:
   flutter:
     sdk: flutter
@@ -75,17 +96,20 @@ dependencies:
   intl: ^0.18.1
   csv: ^5.1.1
   geolocator: ^10.1.0
-
+```
 
 ## Project Structure
+
+```
 lib/
   ├── main.dart          # Main application entry point
   └── settings_page.dart # Settings page implementation
 assets/
   └── gps_data.csv      # GPS data file
-
+```
 
 ## Implementation Details
+
 - Uses Haversine formula for distance calculations
 - Implements smooth data interpolation
 - Real-time speed calculations
@@ -94,17 +118,17 @@ assets/
 - Location services integration
 
 ## Author
+
 Built by Neil Thomas
 
 ## License
+
 This project is proprietary and all rights are reserved.
 
 ## Resources
+
 For help getting started with Flutter development:
 
-- Flutter Documentation
-- Flutter Cookbook
-- Flutter API Reference
-
-
-
+- [Flutter Documentation](https://flutter.dev/docs)
+- [Flutter Cookbook](https://flutter.dev/docs/cookbook)
+- [Flutter API Reference](https://api.flutter.dev)
