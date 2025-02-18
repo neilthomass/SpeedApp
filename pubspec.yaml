@@ -36,6 +36,7 @@ dependencies:
   csv: ^5.0.1
   syncfusion_flutter_charts: ^28.2.5+1
   http: ^0.13.6
+  location: ^5.0.0
 
 
 
