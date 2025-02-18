@@ -38,7 +38,9 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: _isDarkMode ? ThemeData.dark() : ThemeData.light(),
+      themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
+      darkTheme: ThemeData.dark(),
+      theme: ThemeData.light(),
       home: SpeedTracker(isDarkMode: _isDarkMode, onThemeChanged: _toggleTheme),
     );
   }

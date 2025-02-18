@@ -12,6 +12,7 @@ A Flutter application that tracks and visualizes speed data in real-time with a 
 - Current location display
 - GPS data integration
 - Smooth data interpolation
+- Support for telemetry data integration
 
 ## Getting Started
 
