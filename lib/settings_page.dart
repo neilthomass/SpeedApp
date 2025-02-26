@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:location/location.dart';
 
 class SettingsPage extends StatefulWidget {
   final bool isDarkMode;
@@ -16,7 +16,8 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  Position? _currentPosition;
+  LocationData? _currentPosition;
+  final Location location = Location();
 
   @override
   void initState() {
@@ -26,16 +27,23 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _getCurrentLocation() async {
     try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      
-      if (permission == LocationPermission.denied) {
-        return;
+      bool _serviceEnabled = await location.serviceEnabled();
+      if (!_serviceEnabled) {
+        _serviceEnabled = await location.requestService();
+        if (!_serviceEnabled) {
+          return;
+        }
       }
 
-      Position position = await Geolocator.getCurrentPosition();
+      PermissionStatus _permissionGranted = await location.hasPermission();
+      if (_permissionGranted == PermissionStatus.denied) {
+        _permissionGranted = await location.requestPermission();
+        if (_permissionGranted != PermissionStatus.granted) {
+          return;
+        }
+      }
+
+      LocationData position = await location.getLocation();
       setState(() {
         _currentPosition = position;
       });
@@ -119,7 +127,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         SizedBox(height: 8),
                         Text(
                           _currentPosition != null
-                              ? 'Lat: ${_currentPosition!.latitude.toStringAsFixed(5)}\nLon: ${_currentPosition!.longitude.toStringAsFixed(5)}'
+                              ? 'Lat: ${_currentPosition!.latitude?.toStringAsFixed(5)}\nLon: ${_currentPosition!.longitude?.toStringAsFixed(5)}'
                               : 'Location not available',
                           style: TextStyle(
                             fontSize: 16,
