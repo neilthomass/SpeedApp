@@ -25,7 +25,7 @@ A Flutter application that tracks and visualizes speed data in real-time with a 
     - `fl_chart`
     - `intl`
     - `csv`
-    - `geolocator`
+    - `location`  // Updated from geolocator
 
 ### Installation
 
@@ -38,23 +38,11 @@ A Flutter application that tracks and visualizes speed data in real-time with a 
    ```bash
    flutter pub get
    ```
-3. Place your GPS data file in:
-   ```
-   assets/gps_data.csv
-   ```
 4. Run the app:
    ```bash
    flutter run
    ```
 
-### CSV File Format
-
-The GPS data file should be in CSV format with the following structure:
-
-```
-latitude,longitude
-XX.XXXXX,YY.YYYYY
-```
 
 ## Features in Detail
 
@@ -87,17 +75,7 @@ XX.XXXXX,YY.YYYYY
 - Features real-time data processing
 - Responsive design for various screen sizes
 
-## Dependencies
 
-```yaml
-dependencies:
-  flutter:
-    sdk: flutter
-  fl_chart: ^0.65.0
-  intl: ^0.18.1
-  csv: ^5.1.1
-  geolocator: ^10.1.0
-```
 
 ## Project Structure
 
@@ -105,9 +83,6 @@ dependencies:
 lib/
   ├── main.dart          # Main application entry point
   └── settings_page.dart # Settings page implementation
-assets/
-  └── gps_data.csv      # GPS data file
-```
 
 ## Implementation Details
 
