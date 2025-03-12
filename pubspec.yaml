@@ -30,21 +30,45 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  geolocator: ^10.0.0
   fl_chart: ^0.63.0
-  intl: ^0.18.0
+  intl: ^0.18.0  # or latest version
+  csv: ^5.0.1
+  syncfusion_flutter_charts: ^28.2.5+1
+  http: ^0.13.6
   location: ^5.0.0
+
+
+
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   audioplayers: ^5.2.1
   flutter_tts: ^3.8.5
 
-  # Remove these as they're no longer needed
-  # geolocator: ^10.0.0
-  # geolocator_android: ^4.2.0
-  # geolocator_apple: ^2.2.0
-  # Remove csv package if not needed elsewhere
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
 
+  # The "flutter_lints" package below contains a set of recommended lints to
+  # encourage good coding practices. The lint set provided by the package is
+  # activated in the `analysis_options.yaml` file located at the root of your
+  # package. See that file for information about deactivating specific lint
+  # rules and activating additional ones.
+  flutter_lints: ^5.0.0
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
 flutter:
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
   uses-material-design: true
+  assets:
+    - assets/gps_data.csv
 
   # To add assets to your application, add an assets section, like this:
   assets:
