@@ -3,15 +3,18 @@ import 'dart:async';
 import 'dart:math';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter/services.dart' show rootBundle;
-import 'package:csv/csv.dart';
-import 'dart:convert';
+import 'package:location/location.dart';  // Changed from geolocator
 import 'settings_page.dart';
 import 'package:flutter/services.dart';
 
+
+
+
 enum SpeedUnit { mph, kph }
 
+
 void main() {
+  
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -63,130 +66,88 @@ class SpeedTracker extends StatefulWidget {
 
 
 class _SpeedTrackerState extends State<SpeedTracker> {
-  static const double earthRadiusMiles = 3958.8;
   static const int graphUpdateRate = 100;
-  static const int speedMeasureRate = 500;
-
-  double _lastMeasuredSpeed = 0.0;
+  
+  final Location location = Location();
+  LocationData? _locationData;
+  StreamSubscription<LocationData>? _locationSubscription;
+  
+  double _currentSpeed = 0.0;
   double _currentDisplaySpeed = 0.0;
   double _targetSpeed = 0.0;
-  List<List<double>> _gpsData = [];
-  int _currentIndex = 0;
-  double? _prevLat, _prevLon;
   final List<FlSpot> _speedData = [FlSpot(0, 0)];
   final List<Map<String, String>> _locationLog = [];
-
-  Timer? _speedTimer;
+  
   Timer? _graphUpdateTimer;
   Timer? _interpolationTimer;
 
   @override
   void initState() {
     super.initState();
-    _loadCsvData();
+    _initializeLocation();
     _graphUpdateTimer = Timer.periodic(Duration(milliseconds: graphUpdateRate), _updateGraph);
     _interpolationTimer = Timer.periodic(Duration(milliseconds: graphUpdateRate), _interpolateSpeed);
+  }
+
+  Future<void> _initializeLocation() async {
+    bool _serviceEnabled;
+    PermissionStatus _permissionGranted;
+
+    _serviceEnabled = await location.serviceEnabled();
+    if (!_serviceEnabled) {
+      _serviceEnabled = await location.requestService();
+      if (!_serviceEnabled) {
+        return;
+      }
+    }
+
+    _permissionGranted = await location.hasPermission();
+    if (_permissionGranted == PermissionStatus.denied) {
+      _permissionGranted = await location.requestPermission();
+      if (_permissionGranted != PermissionStatus.granted) {
+        return;
+      }
+    }
+
+    // Configure location settings
+    await location.changeSettings(
+      accuracy: LocationAccuracy.high,
+      interval: 500, // Update interval in milliseconds
+      distanceFilter: 0,
+    );
+
+    // Start listening to location updates
+    _locationSubscription = location.onLocationChanged.listen(_updateLocation);
+  }
+
+  void _updateLocation(LocationData locationData) {
+    setState(() {
+      _currentSpeed = (locationData.speed ?? 0) * 2.23694; // Convert m/s to mph
+      _targetSpeed = _currentSpeed;
+      
+      String timestamp = DateFormat('HH:mm:ss.SSS').format(DateTime.now());
+      _locationLog.insert(0, {
+        "latlon": "Lat: ${locationData.latitude?.toStringAsFixed(5)}, Lon: ${locationData.longitude?.toStringAsFixed(5)}", 
+        "timestamp": timestamp
+      });
+      if (_locationLog.length > 20) _locationLog.removeLast();
+    });
+  }
+
+  @override
+  void dispose() {
+    _locationSubscription?.cancel();
+    _graphUpdateTimer?.cancel();
+    _interpolationTimer?.cancel();
+    super.dispose();
   }
 
   void _interpolateSpeed(Timer timer) {
     if (_currentDisplaySpeed != _targetSpeed) {
       setState(() {
-        double difference = (_targetSpeed - _currentDisplaySpeed)*0.2;
+        double difference = (_targetSpeed - _currentDisplaySpeed) * 0.2;
         _currentDisplaySpeed += difference;
       });
-    }
-  }
-
-  Map<String, dynamic> prepareTelemetry(double latitude, double longitude, double speed) {
-    return {
-      "timestamp": DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(DateTime.now().toUtc()),
-      "location": {
-        "latitude": latitude,
-        "longitude": longitude
-      },
-      "speed": speed
-    };
-  }
-
-  void sendTelemetry() {
-    if (_currentIndex == 0 || _currentIndex >= _gpsData.length) return;
-
-    double lat = _gpsData[_currentIndex][0];
-    double lon = _gpsData[_currentIndex][1];
-
-    Map<String, dynamic> telemetry = prepareTelemetry(lat, lon, _currentDisplaySpeed);
-    String jsonPayload = jsonEncode(telemetry);
-
-    print(jsonPayload); // Replace with actual HTTP POST request
-  }
-
-  Future<void> _loadCsvData() async {
-    try {
-      final rawData = await rootBundle.loadString("assets/gps_data.csv");
-      List<List<dynamic>> csvTable = const CsvToListConverter(eol: "\n").convert(rawData);
-
-      if (csvTable.isEmpty) return;
-
-      if (csvTable[0][0] is String && csvTable[0][1] is String) {
-        csvTable.removeAt(0);
-      }
-
-      _gpsData = csvTable
-          .where((row) => row.length >= 2)
-          .map((row) {
-        double? lat = double.tryParse(row[0].toString());
-        double? lon = double.tryParse(row[1].toString());
-        return (lat != null && lon != null) ? [lat, lon] : null;
-      })
-          .whereType<List<double>>()
-          .toList();
-
-      if (_gpsData.isNotEmpty) {
-        _speedTimer = Timer.periodic(Duration(milliseconds: speedMeasureRate), _updateSpeed);
-      }
-    } catch (e) {
-      print("Error loading CSV: $e");
-    }
-  }
-
-  static const int smoothingWindowSize = 5;
-    List<double> _speedBuffer = [];
-
-  void _updateSpeed(Timer timer) {
-    if (_currentIndex >= _gpsData.length) {
-      _speedTimer?.cancel();
-      return;
-    }
-
-    try {
-      double lat = _gpsData[_currentIndex][0];
-      double lon = _gpsData[_currentIndex][1];
-      String timestamp = DateFormat('HH:mm:ss.SSS').format(DateTime.now());
-
-      if (_prevLat != null && _prevLon != null) {
-        double distance = _calculateDistance(_prevLat!, _prevLon!, lat, lon);
-        _lastMeasuredSpeed = distance * 3600;
-
-        // Apply smoothing
-        _speedBuffer.add(_lastMeasuredSpeed);
-        if (_speedBuffer.length > smoothingWindowSize) {
-          _speedBuffer.removeAt(0);
-        }
-        _targetSpeed = _speedBuffer.reduce((a, b) => a + b) / _speedBuffer.length;
-      }
-
-      _prevLat = lat;
-      _prevLon = lon;
-      _currentIndex++;
-
-      sendTelemetry();
-
-      setState(() {
-        _locationLog.insert(0, {"latlon": "Lat: ${lat.toStringAsFixed(5)}, Lon: ${lon.toStringAsFixed(5)}", "timestamp": timestamp});
-        if (_locationLog.length > 20) _locationLog.removeLast();
-      });
-    } catch (e) {
-      print("Error processing GPS data: $e");
     }
   }
 
@@ -215,18 +176,13 @@ class _SpeedTrackerState extends State<SpeedTracker> {
     double dLon = _toRadians(lon2 - lon1);
     double a = sin(dLat / 2) * sin(dLat / 2) +
         cos(_toRadians(lat1)) * cos(_toRadians(lat2)) * sin(dLon / 2) * sin(dLon / 2);
+    const double earthRadiusMiles = 3959;
     return earthRadiusMiles * 2 * atan2(sqrt(a), sqrt(1 - a));
   }
 
   double _toRadians(double degrees) => degrees * pi / 180;
 
-  @override
-  void dispose() {
-    _speedTimer?.cancel();
-    _graphUpdateTimer?.cancel();
-    _interpolationTimer?.cancel();
-    super.dispose();
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -333,7 +289,7 @@ class _SpeedTrackerState extends State<SpeedTracker> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          "${(_convertSpeed(_currentDisplaySpeed) * 100).roundToDouble() / 100}",
+          "${(_convertSpeed(_currentDisplaySpeed)).toInt()}",
           style: TextStyle(
             fontSize: 48,
             fontWeight: FontWeight.bold,
@@ -383,10 +339,20 @@ class _SpeedTrackerState extends State<SpeedTracker> {
       );
     }
 
+    // Calculate dynamic y-axis range based on the latest speed data
     double latestY = _speedData.last.y;
-    double yRange = 20.0;
+    double yRange = 40.0; // Default range for normal speed changes
     double minY = latestY - yRange / 2;
     double maxY = latestY + yRange / 2;
+
+    // Check for sudden changes in speed
+    double minSpeed = _speedData.map((spot) => spot.y).reduce(min);
+    double maxSpeed = _speedData.map((spot) => spot.y).reduce(max);
+    if ((maxSpeed - minSpeed) > 10) {
+      // Adjust y-axis range if speed differs by more than 10 mph
+      minY = minSpeed - 5.0; // Add some padding
+      maxY = maxSpeed + 5.0; // Add some padding
+    }
 
     return SizedBox(
       height: 180,
@@ -404,11 +370,11 @@ class _SpeedTrackerState extends State<SpeedTracker> {
             lineBarsData: [
               LineChartBarData(
                 spots: _speedData,
-                preventCurveOverShooting: false,  // Changed to false for smoother curves
+                preventCurveOverShooting: false,
                 barWidth: 3.0,
-                curveSmoothness: 0.35,  // Increased smoothness
+                curveSmoothness: 0.35,
                 isCurved: true,
-                isStrokeCapRound: true,  // Added rounded ends
+                isStrokeCapRound: true,
                 color: Colors.blue[400],
                 dotData: FlDotData(show: false),
                 belowBarData: BarAreaData(
