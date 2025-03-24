@@ -1,0 +1,2 @@
+/Users/neilthomas/StudioProjects/speedTracker/android/app/.cxx/Debug/4v474u2e/armeabi-v7a/CMakeFiles/edit_cache.dir
+/Users/neilthomas/StudioProjects/speedTracker/android/app/.cxx/Debug/4v474u2e/armeabi-v7a/CMakeFiles/rebuild_cache.dir

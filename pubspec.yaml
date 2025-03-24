@@ -35,13 +35,9 @@ dependencies:
   location: ^5.0.0
   cupertino_icons: ^1.0.8
   audioplayers: ^5.2.1
-  flutter_tts: ^3.8.5
+  flutter_tts: ^4.2.2
 
-  # Remove these as they're no longer needed
-  # geolocator: ^10.0.0
-  # geolocator_android: ^4.2.0
-  # geolocator_apple: ^2.2.0
-  # Remove csv package if not needed elsewhere
+
 
 flutter:
   uses-material-design: true
