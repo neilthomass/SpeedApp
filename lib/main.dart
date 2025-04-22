@@ -111,15 +111,19 @@ class _SpeedTrackerState extends State<SpeedTracker> {
   
   final Location location = Location();
   final FlutterTts flutterTts = FlutterTts();
+  final Random _random = Random();
   
   StreamSubscription<LocationData>? _locationSubscription;
   
   double _currentSpeed = 0.0;
   double _currentDisplaySpeed = 0.0;
   double _targetSpeed = 0.0;
-  double _suggestedSpeed = 0.0; // New variable for recommended speed
+  double _suggestedSpeed = 0.0;
+  int _numberOfLanes = 5;
+  int _selectedLaneIndex = 2;
+  List<double> _laneSpeeds = []; // Store random speeds for each lane
   final List<FlSpot> _speedData = List.generate(30, (index) => FlSpot(index * 0.03, 0));
-  final List<FlSpot> _suggestedSpeedData = List.generate(30, (index) => FlSpot(index * 0.03, 0)); // Predicted future speed data
+  final List<FlSpot> _suggestedSpeedData = List.generate(30, (index) => FlSpot(index * 0.03, 0));
   final List<Map<String, String>> _locationLog = [];
   
   // TTS warning variables
@@ -135,6 +139,7 @@ class _SpeedTrackerState extends State<SpeedTracker> {
     super.initState();
     _initializeLocation();
     _initializeTts();
+    _initializeLaneSpeeds(); // Initialize random lane speeds
     _graphUpdateTimer = Timer.periodic(Duration(milliseconds: graphUpdateRate), _updateGraph);
     _interpolationTimer = Timer.periodic(Duration(milliseconds: graphUpdateRate), _interpolateSpeed);
     _warningTimer = Timer.periodic(Duration(milliseconds: 500), _checkSpeedDifference);
@@ -185,6 +190,13 @@ class _SpeedTrackerState extends State<SpeedTracker> {
     // Error handler to debug TTS issues
     flutterTts.setErrorHandler((msg) {
       print("TTS ERROR: $msg");
+    });
+  }
+  
+  void _initializeLaneSpeeds() {
+    _laneSpeeds = List.generate(_numberOfLanes, (index) {
+      // Generate random speeds between 30 and 80 mph
+      return 30.0 + _random.nextDouble() * 50.0;
     });
   }
   
@@ -239,12 +251,8 @@ class _SpeedTrackerState extends State<SpeedTracker> {
       _currentSpeed = (locationData.speed ?? 0) * 2.23694; // Convert m/s to mph
       _targetSpeed = _currentSpeed;
       
-      // Generate a suggested speed (this is a simple example - you can replace with your algorithm)
-      // For example, this gently transitions toward a target speed of 55 mph
-      double targetSpeedLimit = 55.0;
-      //_suggestedSpeed = _currentSpeed < targetSpeedLimit ?
-      //    min(_currentSpeed + 5.0, targetSpeedLimit) : // If below target, accelerate gently
-      //    max(_currentSpeed - 3.0, targetSpeedLimit);  // If above target, decelerate gently
+      // Use the selected lane's speed as the suggested speed
+      _suggestedSpeed = _laneSpeeds[_selectedLaneIndex];
       
       // Update the suggested speed data
       _updateSuggestedSpeedData();
@@ -700,11 +708,6 @@ class _SpeedTrackerState extends State<SpeedTracker> {
 
   // Create new lanes visualization to replace the location log
   Widget _buildLanesVisualization() {
-    // Calculate lane speeds
-    double currentLaneSpeed = _currentDisplaySpeed;
-    double leftLaneSpeed = max(0, _currentDisplaySpeed - 20);
-    double rightLaneSpeed = _currentDisplaySpeed + 20;
-    
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -713,20 +716,19 @@ class _SpeedTrackerState extends State<SpeedTracker> {
           Expanded(
             child: Row(
               children: [
-                // Left lane
-                Expanded(
-                  child: _buildLane("Left Lane", leftLaneSpeed),
-                ),
-                SizedBox(width: 12),
-                // Current lane
-                Expanded(
-                  child: _buildLane("Your Lane", currentLaneSpeed, isCurrentLane: true),
-                ),
-                SizedBox(width: 12),
-                // Right lane
-                Expanded(
-                  child: _buildLane("Right Lane", rightLaneSpeed),
-                ),
+                for (int i = 0; i < _numberOfLanes; i++) ...[
+                  if (i > 0) SizedBox(width: 12),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedLaneIndex = i;
+                        });
+                      },
+                      child: _buildLane("", _laneSpeeds[i], isCurrentLane: i == _selectedLaneIndex),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -755,17 +757,6 @@ class _SpeedTrackerState extends State<SpeedTracker> {
       ),
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: widget.isDarkMode ? Colors.grey[400] : Colors.grey[600],
-              ),
-            ),
-          ),
           Expanded(
             child: Container(
               decoration: BoxDecoration(
