@@ -1,18 +1,5 @@
-# Speed Tracker
 
-A Flutter application that tracks and visualizes speed data in real-time with a modern, clean interface.
-
-## Features
-
-- Real-time speed tracking and visualization
-- Dynamic speed chart with smooth animations
-- Location logging with timestamps
-- Unit conversion between MPH and KPH
-- Dark/Light theme support
-- Current location display
-- GPS data integration
-- Smooth data interpolation
-- Support for telemetry data integration
+A Flutter application that tracks and visualizes speed data in real-time with a modern, clean interface. Features multiple lane visualization and speed suggestions based on lane selection.
 
 ## Getting Started
 
@@ -21,85 +8,51 @@ A Flutter application that tracks and visualizes speed data in real-time with a 
 - Flutter SDK
 - Dart SDK
 - iOS/Android development environment
-- Required packages:
-    - `fl_chart`
-    - `intl`
-    - `csv`
-    - `location`  // Updated from geolocator
+
+### Required Packages
+
+- `fl_chart`: For speed visualization charts
+- `flutter_tts`: For text-to-speech functionality
+- `location`: For GPS speed tracking
+- `intl`: For data formatting
 
 ### Installation
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/speed-tracker.git
-   cd speed-tracker
+   git clone https://github.com/FlowMoTechnologies/flowmo_app.git
+   cd flowmo_app
    ```
 2. Install dependencies:
    ```bash
    flutter pub get
    ```
-4. Run the app:
+3. Run the app:
    ```bash
    flutter run
    ```
-
-
-## Features in Detail
-
-### Speed Display
-- Large, easy-to-read speed indicator
-- Toggle between MPH and KPH
-- Smooth value transitions
-
-### Speed Chart
-- Real-time updating graph
-- Smooth curve interpolation
-- Dynamic y-axis scaling
-- Transparent gradient fill
-
-### Location Log
-- Real-time GPS coordinate tracking
-- Timestamp for each location update
-- Scrollable history view
-
-### Settings
-- Theme toggle (Dark/Light mode)
-- Current location display
-- Persistent settings storage
-
-## Technical Details
-
-- Built with Flutter
-- Uses custom interpolation for smooth animations
-- Implements GPS data parsing
-- Features real-time data processing
-- Responsive design for various screen sizes
-
-
 
 ## Project Structure
 
 ```
 lib/
-  ├── main.dart          # Main application entry point
-  └── settings_page.dart # Settings page implementation
+  ├── models/
+  │   └── speed_data.dart       # Data models for speed and lane information
+  ├── services/
+  │   ├── speed_service.dart    # Speed tracking and calculations
+  │   └── tts_service.dart      # Text-to-speech functionality
+  ├── widgets/
+  │   ├── speed_display.dart    # Speed indicator widget
+  │   ├── speed_chart.dart      # Chart visualization
+  │   └── lane_display.dart     # Lane-based visualization
+  └── main.dart                 # Main application entry point
+```
 
-## Implementation Details
-
-- Uses Haversine formula for distance calculations
-- Implements smooth data interpolation
-- Real-time speed calculations
-- Dynamic chart updates
-- Theme-aware UI components
-- Location services integration
 
 ## Author
 
 Built by Neil Thomas
 
-## License
-
-This project is proprietary and all rights are reserved.
 
 ## Resources
 
@@ -108,3 +61,4 @@ For help getting started with Flutter development:
 - [Flutter Documentation](https://flutter.dev/docs)
 - [Flutter Cookbook](https://flutter.dev/docs/cookbook)
 - [Flutter API Reference](https://api.flutter.dev)
+
